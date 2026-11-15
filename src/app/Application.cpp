@@ -2,17 +2,19 @@
 
 #include <format>
 
-#include "../core/log.h"
+#include "../core/Log.h"
 
 vsp::Application::Application()
 	: m_window(WindowDesc{})
 {
+	m_vk.init({}, m_window);
 	log::info("Application started");
 }
 
 vsp::Application::~Application()
 {
 	log::info("Application shutting down");
+	m_vk.shutdown();
 }
 
 void vsp::Application::run()
@@ -31,7 +33,7 @@ void vsp::Application::run()
 
 		// ---- Delta Time ---
 		auto now = clock::now();
-		double dt = std::chrono::duration(now - last).count();
+		double dt = std::chrono::duration<double>(now - last).count();
 		last = now;
 		m_time += dt;
 		updateTitle(dt);

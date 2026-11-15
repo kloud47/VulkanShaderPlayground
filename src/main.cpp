@@ -9,7 +9,7 @@
 
 #include "core/Window.h"
 #include "app/Application.h"
-#include  "core/log.h"
+#include  "core/Log.h"
 
 int main()
 {

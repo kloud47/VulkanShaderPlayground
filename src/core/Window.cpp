@@ -1,5 +1,5 @@
 #include "Window.h"
-#include "core/log.h"
+#include "core/Log.h"
 
 #include <stdexcept>
 
