@@ -4,6 +4,7 @@
 #include "../core/log.h"
 
 #include <GLFW/glfw3.h>
+#include <stdexcept>
 #include <vector>
 
 namespace vsp {
@@ -16,11 +17,31 @@ namespace vsp {
         return VK_FALSE;
     }
 
-    void VulkanContext::init(const VulkanContextDesc& desc, Window&)
+    static uint32_t findGraphicsPresentFamily(VkPhysicalDevice gpu, VkSurfaceKHR surface)
+    {
+        uint32_t count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
+        std::vector<VkQueueFamilyProperties> families(count);
+        vkGetPhysicalDeviceQueueFamilyProperties(gpu, &count, families.data());
+        for (uint32_t i = 0; i < count; ++i) {
+            VkBool32 canPresent = VK_FALSE;
+            vkGetPhysicalDeviceSurfaceSupportKHR(gpu, i, surface, &canPresent);
+
+            if ((families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && canPresent)
+                return i;
+        }
+        return UINT32_MAX;
+    }
+
+    void VulkanContext::init(const VulkanContextDesc& desc, Window& window)
     {
         m_validation = desc.enableValidation;
         createInstance(desc);
         createDebugMessenger();
+        createSurface(window);
+        pickPhysicalDevice();
+        createDevice();
+        createAllocator();
     }
 
     void VulkanContext::createInstance(const VulkanContextDesc& desc)
@@ -69,6 +90,20 @@ namespace vsp {
 
     void VulkanContext::shutdown()
     {
+        if (m_allocator) {
+            vmaDestroyAllocator(m_allocator);
+            m_allocator = VK_NULL_HANDLE;
+        }
+        if (m_device) {
+            vkDestroyDevice(m_device, nullptr);   // the queue is owned by the device; no separate destroy
+            m_device = VK_NULL_HANDLE;
+            m_graphicsQueue = VK_NULL_HANDLE;
+        }
+        if (m_surface)
+        {
+            vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+            m_surface = VK_NULL_HANDLE;
+        }
         if (m_debugMessenger) {
             auto destroy = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
                 vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT"));
@@ -77,6 +112,107 @@ namespace vsp {
         }
         vkDestroyInstance(m_instance, nullptr);
         m_instance = VK_NULL_HANDLE;
+    }
+
+    void VulkanContext::createSurface(Window& window)
+    {
+        VK_CHECK(glfwCreateWindowSurface(m_instance, window.handle(), nullptr, &m_surface));
+    }
+
+    void VulkanContext::pickPhysicalDevice()
+    {
+        uint32_t physicalDeviceCount = 0;
+        VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &physicalDeviceCount, nullptr));
+
+        if (physicalDeviceCount == 0) {
+            throw std::runtime_error("No Vulkan physical devices found");
+        }
+
+        std::vector<VkPhysicalDevice> gpus(physicalDeviceCount);
+        VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &physicalDeviceCount, gpus.data()));
+        
+        log::info("GPU found: {}", physicalDeviceCount);
+
+        for (VkPhysicalDevice gpu : gpus)
+        {
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(gpu, &props);
+
+            const uint32_t family = findGraphicsPresentFamily(gpu, m_surface);
+            const bool     usable = props.apiVersion >= VK_API_VERSION_1_3 && family != UINT32_MAX;
+            const bool     discrete = props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;  // prefer discrete; integrated is the fallback
+
+            log::info("{} | {} | Vulkan {}.{} {}", props.deviceName, discrete ? "discrete": "integrated/other", VK_API_VERSION_MAJOR(props.apiVersion), VK_API_VERSION_MINOR(props.apiVersion),
+                usable ? "" : "(not usable)");
+
+            if (!usable) continue;
+
+            if (m_physicalDevice == VK_NULL_HANDLE || discrete)
+            {
+                m_physicalDevice = gpu;
+                m_graphicsFamily = family;
+                m_gpuProperties = props;
+            }
+            if (discrete) break;
+        }
+
+        if (m_physicalDevice == VK_NULL_HANDLE)
+            throw std::runtime_error("No GPU supports Vulkan 1.3 with graphics + present");
+
+        log::info("Selected GPU: {} (queue family {})", m_gpuProperties.deviceName, m_graphicsFamily);
+    }
+
+    void VulkanContext::createDevice()
+    {
+        const float priority = 1.0f;
+        VkDeviceQueueCreateInfo queueInfo{};
+        queueInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueInfo.queueFamilyIndex = m_graphicsFamily;
+        queueInfo.queueCount       = 1;
+        queueInfo.pQueuePriorities = &priority;
+        
+        // 2. Feature chain:  features2 ──pNext──► vulkan13features
+        VkPhysicalDeviceVulkan13Features f13{};
+        f13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        f13.dynamicRendering = VK_TRUE;
+        f13.synchronization2 = VK_TRUE;
+
+        VkPhysicalDeviceFeatures2 f2{};
+        f2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        f2.pNext = &f13;
+        f2.features.samplerAnisotropy = VK_TRUE;    // sharper textures at angles (6.2)
+        f2.features.fillModeNonSolid = VK_TRUE;     // wireframe mode (4.2)
+
+        // Device Extensions
+        const char* extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+        VkDeviceCreateInfo logicalDevice{};
+        logicalDevice.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        logicalDevice.pNext = &f2;                          // features go through pNext...
+        logicalDevice.queueCreateInfoCount = 1;
+        logicalDevice.pQueueCreateInfos = &queueInfo;
+        logicalDevice.enabledExtensionCount = 1;
+        logicalDevice.ppEnabledExtensionNames = extensions;
+        // ...so pEnabledFeatures must stay nullptr (the {} already set it)
+
+        VK_CHECK(vkCreateDevice(m_physicalDevice, &logicalDevice, nullptr, &m_device));
+
+        // Get the queue: family m_graphicsFamily, queue index 0
+        vkGetDeviceQueue(m_device, m_graphicsFamily, 0, &m_graphicsQueue);
+
+        log::info("VkDevice created, features: dynamicRendering, synchronization2, samplerAnisotropy, fillModeNonSolid");
+    }
+
+    void VulkanContext::createAllocator()
+    {
+        VmaAllocatorCreateInfo info{};
+        info.physicalDevice = m_physicalDevice;
+        info.device = m_device;
+        info.instance = m_instance;
+        info.vulkanApiVersion = VK_API_VERSION_1_3;
+
+        VK_CHECK(vmaCreateAllocator(&info, &m_allocator));
+        log::info("VMA allocator created");
     }
 
 } 
