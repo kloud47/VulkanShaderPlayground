@@ -5,15 +5,13 @@ A learning project: a Vulkan 1.3 app for practicing GLSL. You pick an object (a 
 a **texture** and a **shader**, and see edits live through hot reload.
 
 > Built by hand, one lesson at a time. The code in `src/` is my own; `docs/` holds the
-> lessons it follows.
 
 ## Where to start
 
 1. [docs/ROADMAP.md](docs/ROADMAP.md): the full plan, with progress checkboxes
 2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): where code goes, and the conventions used
-3. First lesson: [docs/lessons/00-foundations/0.1-toolchain-cmake-vcpkg.md](docs/lessons/00-foundations/0.1-toolchain-cmake-vcpkg.md)
 
-## Build (once lesson 0.1 is done)
+## Here
 
 Requirements: Visual Studio 2026 (Desktop development with C++, CMake tools, vcpkg), Vulkan
 SDK 1.3+ with `VULKAN_SDK` set, and a GPU that supports Vulkan 1.3.
