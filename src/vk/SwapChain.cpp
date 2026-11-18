@@ -17,8 +17,8 @@ namespace {
 			{
 				return f;
 			}
-			return available[0];
 		}
+		return available[0];
 	}
 	// vsync on  -> FIFO (always supported, no tearing, cool laptop)
 	// vsync off -> MAILBOX, else IMMEDIATE, else FIFO
