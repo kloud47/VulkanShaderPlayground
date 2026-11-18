@@ -8,12 +8,16 @@ vsp::Application::Application()
 	: m_window(WindowDesc{})
 {
 	m_vk.init({}, m_window);
+	
+	const auto fb = m_window.framebufferExtent();
+	m_swapchain.init(m_vk, { fb.width, fb.height }, /*vsync*/ true);
 	log::info("Application started");
 }
 
 vsp::Application::~Application()
 {
 	log::info("Application shutting down");
+	m_swapchain.shutdown();     // before the device it was created from
 	m_vk.shutdown();
 }
 
