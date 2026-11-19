@@ -63,7 +63,7 @@ void Swapchain::recreate(VkExtent2D framebufferExtent, bool vsync)
 {
 	vkDeviceWaitIdle(m_ctx->device()); // GPU must be done with the old images
 	VkSwapchainKHR oldSwapchain = m_swapchain;
-	destroyViews();
+	destroyPerImageResources();
 	create(framebufferExtent, vsync, oldSwapchain);			// overwrites m_swapchain with the new one
 	vkDestroySwapchainKHR(m_ctx->device(), oldSwapchain, nullptr);
 }
@@ -72,7 +72,7 @@ void Swapchain::shutdown()
 {
 	if (m_ctx == nullptr) return;
 
-	destroyViews();
+	destroyPerImageResources();
 	if (m_swapchain != VK_NULL_HANDLE) {
 		vkDestroySwapchainKHR(m_ctx->device(), m_swapchain, nullptr);   // also frees m_images
 		m_swapchain = VK_NULL_HANDLE;
@@ -141,17 +141,27 @@ void Swapchain::create(VkExtent2D framebufferExtent, bool vsync, VkSwapchainKHR 
 		VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &m_views[i]));
 	}
 
+	m_renderFinished.resize(m_images.size());
+	for (VkSemaphore& s : m_renderFinished) {
+		VkSemaphoreCreateInfo semInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+		VK_CHECK(vkCreateSemaphore(device, &semInfo, nullptr, &s));
+	}
+
 	log::info("Swapchain {}x{}  {}  {}  {} images",
 		m_extent.width, m_extent.height,
 		string_VkFormat(m_format), string_VkPresentModeKHR(m_presentMode), m_images.size());
 }
 
-void Swapchain::destroyViews()
+void Swapchain::destroyPerImageResources()
 {
 	if (!m_ctx)
 		return;
 
 	VkDevice device = m_ctx->device();
+	for (VkSemaphore s : m_renderFinished)
+		vkDestroySemaphore(device, s, nullptr);
+	m_renderFinished.clear();
+
 	for (VkImageView view : m_views)
 	{
 		if (view != VK_NULL_HANDLE)

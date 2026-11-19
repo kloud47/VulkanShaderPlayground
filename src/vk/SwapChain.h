@@ -27,10 +27,11 @@ public:
     uint32_t       imageCount() const { return static_cast<uint32_t>(m_images.size()); }
     VkImage        image(uint32_t i) const { return m_images[i]; }
     VkImageView    view(uint32_t i)  const { return m_views[i]; }
+    VkSemaphore    renderFinished(uint32_t i) const { return m_renderFinished[i]; }
 
 private:
     void create(VkExtent2D framebufferExtent, bool vsync, VkSwapchainKHR oldSwapchain);
-    void destroyViews();
+    void destroyPerImageResources();
 
     VulkanContext*           m_ctx = nullptr;
     VkSwapchainKHR           m_swapchain = VK_NULL_HANDLE;
@@ -40,7 +41,7 @@ private:
     VkExtent2D               m_extent{};
     std::vector<VkImage>     m_images;
     std::vector<VkImageView> m_views;
-    // 1.4 adds: std::vector<VkSemaphore> m_renderFinished;   (one per image)
+    std::vector<VkSemaphore> m_renderFinished;  
 };
 
 }

@@ -16,7 +16,7 @@ find_package(VulkanMemoryAllocator CONFIG REQUIRED)     # from vcpkg
 # GLOB is convenient for a learning project: new files are picked up on the next
 # build. (Big projects list files explicitly for reproducibility.)
 file(GLOB_RECURSE VSP_SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.h)
-add_executable(VulkanShaderPlayground ${VSP_SOURCES} "src/core/Log.h" "src/core/Window.h" "src/core/Window.cpp" "src/app/Application.h" "src/app/Application.cpp" "src/vk/VkCheck.h" "src/vk/VulkanContext.h" "src/vk/VulkanContext.cpp" "src/vk/SwapChain.h")
+add_executable(VulkanShaderPlayground ${VSP_SOURCES} "src/core/Log.h" "src/core/Window.h" "src/core/Window.cpp" "src/app/Application.h" "src/app/Application.cpp" "src/vk/VkCheck.h" "src/vk/VulkanContext.h" "src/vk/VulkanContext.cpp" "src/vk/SwapChain.h" "src/vk/VkUtils.h" "src/vk/VkUtils.cpp" "src/vk/Renderer.h" "src/vk/Renderer.cpp")
 
 target_include_directories(VulkanShaderPlayground PRIVATE src)
 

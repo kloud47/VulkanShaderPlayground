@@ -8,16 +8,14 @@ vsp::Application::Application()
 	: m_window(WindowDesc{})
 {
 	m_vk.init({}, m_window);
-	
-	const auto fb = m_window.framebufferExtent();
-	m_swapchain.init(m_vk, { fb.width, fb.height }, /*vsync*/ true);
+	m_renderer.init(m_vk, m_window);
 	log::info("Application started");
 }
 
 vsp::Application::~Application()
 {
 	log::info("Application shutting down");
-	m_swapchain.shutdown();     // before the device it was created from
+	m_renderer.shutdown();     // before the device it was created from
 	m_vk.shutdown();
 }
 
@@ -29,17 +27,18 @@ void vsp::Application::run()
 	while (!m_window.shouldClose()) {
 		m_window.pollEvents();
 
-		if (m_window.consumeResizedFlag())
-		{
-			auto e = m_window.framebufferExtent();
-			vsp::log::info("Resized to {}x{}", e.width, e.height);
-		}
+		//if (m_window.consumeResizedFlag())
+		//{
+		//	auto e = m_window.framebufferExtent();
+		//	vsp::log::info("Resized to {}x{}", e.width, e.height);
+		//}
 
 		// ---- Delta Time ---
 		auto now = clock::now();
 		double dt = std::chrono::duration<double>(now - last).count();
 		last = now;
 		m_time += dt;
+		m_renderer.drawFrame(m_time);
 		updateTitle(dt);
 	}
 }

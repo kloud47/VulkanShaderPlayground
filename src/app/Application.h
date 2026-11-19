@@ -2,7 +2,7 @@
 
 #include "../core/Window.h"
 #include "../vk/VulkanContext.h"
-#include "../vk/SwapChain.h"
+#include "../vk/Renderer.h"
 
 #include <chrono>
 
@@ -23,7 +23,7 @@ namespace vsp {
 
 		Window m_window;
 		VulkanContext m_vk;
-		Swapchain     m_swapchain;
+		Renderer      m_renderer;
 
 		double m_time			 = 0.0;
 		double m_titleTimer		 = 0.0;
