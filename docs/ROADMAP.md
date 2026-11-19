@@ -69,7 +69,7 @@ Every lesson follows the same loop:
     │
  Phase 1  Vulkan core ───────► animated clear color, resize-safe, 0 validation errors
     │
- Phase 2  Pipelines/geometry ► a colored quad drawn from vertex + index buffers
+ Phase 2  Pipelines/geometry ► a UV-colored quad from vertex + index buffers; your first shaders
     │
  Phase 3  Going 3D ──────────► a depth-tested cube you orbit with the mouse
     │
@@ -112,12 +112,16 @@ edit-save-see loop of about one second.
 produce zero validation messages, including with synchronization validation turned on. A
 RenderDoc capture shows your `vkCmdBeginRendering`.
 
-## Phase 2 — Pipelines & geometry *(written after your Phase 1 review)*
-- [ ] 2.1 GLSL first steps & the SPIR-V build step (`glslc` from CMake)
-- [ ] 2.2 A graphics pipeline builder + your first triangle (dynamic rendering, dynamic viewport/scissor)
-- [ ] 2.3 GPU buffers with VMA: vertex/index buffers, staging uploads, immediate submit
+## Phase 2 — Pipelines & geometry
+**Goal:** your own shaders on screen, drawing real geometry from GPU buffers.
+Vulkan plumbing comes as tested code; **you write every shader**.
 
-**Checkpoint:** an indexed, vertex-colored quad.
+- [ ] [2.1 GLSL first steps & the shader build step](lessons/02-pipelines/2.1-glsl-and-shader-build.md): GLSL for C++ programmers, `glslc` from CMake, loading SPIR-V
+- [ ] [2.2 The graphics pipeline & your first triangle](lessons/02-pipelines/2.2-pipeline-and-triangle.md): pipeline builder, dynamic rendering, viewport/scissor, interpolation
+- [ ] [2.3 GPU buffers: vertices, indices & your first mesh](lessons/02-pipelines/2.3-buffers-and-quad.md): VMA, staging + immediate submit, the vertex layout, first procedural patterns
+
+**Checkpoint:** an indexed quad drawn from vertex + index buffers, colored by its UVs
+(black, red, green and yellow corners), plus your own checkerboard and circle shaders.
 
 ## Phase 3 — Going 3D
 - [ ] 3.1 3D math for graphics: vectors, matrices, model/view/projection, Vulkan clip space, GLM

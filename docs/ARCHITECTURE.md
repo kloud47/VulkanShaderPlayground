@@ -47,9 +47,11 @@ VulkanShaderPlayground/
 | Swapchain | `vk/Swapchain.*` | Swapchain images/views, per-image present semaphores, recreation | 1.3 |
 | VkUtils | `vk/VkUtils.*` | `transitionImage`, debug names, small helpers | 1.4 |
 | Renderer | `renderer/Renderer.*` | Frames in flight, acquire → record → submit → present | 1.4 |
-| ShaderModule | `vk/ShaderModule.*` | Load SPIR-V, create `VkShaderModule` | 2.1 |
+| ShaderModule | `vk/ShaderModule.*` | Load SPIR-V, create `VkShaderModule`, `shaderPath()` | 2.1 |
 | PipelineBuilder | `vk/PipelineBuilder.*` | Fluent builder for graphics pipelines (dynamic rendering) | 2.2 |
-| Buffer | `vk/Buffer.*` | VMA-backed buffers, staging upload, immediate submit | 2.3 |
+| ImmediateSubmit | `vk/ImmediateSubmit.*` | Record → submit → wait, for one-off uploads | 2.3 |
+| Buffer | `vk/Buffer.*` | VMA-backed buffers, `createGpuBuffer` staging upload | 2.3 |
+| Vertex | `renderer/Vertex.h` | The project's one vertex layout + its pipeline descriptions | 2.3 |
 | Descriptors | `vk/Descriptors.*` | Set layout builder, descriptor pool/allocator, writer | 3.2 |
 | Image | `vk/Image.*` | VMA-backed images + views (depth, textures) | 3.3, 6.1 |
 | Input, Camera | `core/Input.*`, `scene/Camera.*` | Mouse/keyboard state; orbit camera | 3.4 |
