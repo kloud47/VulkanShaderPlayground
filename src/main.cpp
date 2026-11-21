@@ -13,22 +13,22 @@
 
 int main()
 {
-    uint32_t version = 0;
-    vkEnumerateInstanceVersion(&version);
-    std::cout << std::format("Vulkan loader {}.{}.{}\n",
-        VK_API_VERSION_MAJOR(version), VK_API_VERSION_MINOR(version), VK_API_VERSION_PATCH(version));
+    //uint32_t version = 0;
+    //vkEnumerateInstanceVersion(&version);
+    //std::cout << std::format("Vulkan loader {}.{}.{}\n",
+    //    VK_API_VERSION_MAJOR(version), VK_API_VERSION_MINOR(version), VK_API_VERSION_PATCH(version));
 
-    glm::vec3 v{1.0f, 2.0f, 3.0f};
-    std::cout << std::format("glm length {:.3f}\n", glm::length(v));
+    //glm::vec3 v{1.0f, 2.0f, 3.0f};
+    //std::cout << std::format("glm length {:.3f}\n", glm::length(v));
 
-    std::cout << std::format("result string {}\n", string_VkResult(VK_SUCCESS));
+    //std::cout << std::format("result string {}\n", string_VkResult(VK_SUCCESS));
 
-    if (!glfwInit())
-        return 1;
-    std::cout << std::format("GLFW {} vulkanSupported={}\n", glfwGetVersionString(), glfwVulkanSupported());
-    glfwTerminate();
+    //if (!glfwInit())
+    //    return 1;
+    //std::cout << std::format("GLFW {} vulkanSupported={}\n", glfwGetVersionString(), glfwVulkanSupported());
+    //glfwTerminate();
 
-    std::cout << VSP_ASSETS_DIR << '\n';
+    //std::cout << VSP_ASSETS_DIR << '\n';
 
     try {
         vsp::Application app; // Window is constructed here:

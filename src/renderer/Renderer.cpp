@@ -1,8 +1,10 @@
-#include "Renderer.h"
+#include "renderer/Renderer.h"
 
 #include "vk/VulkanContext.h"
 #include "vk/VkCheck.h"
 #include "vk/VkUtils.h"
+#include "vk/ShaderModule.h"
+#include "vk/PipelineBuilder.h"
 #include "core/Window.h"
 #include "core/log.h"
 
@@ -16,6 +18,7 @@ void vsp::Renderer::init(VulkanContext& ctx, Window& window)
 	const auto fb = window.framebufferExtent();
 	m_swapchain.init(ctx, { fb.width, fb.height }, m_vsync);
 	createFrames();
+	createPipelines();
 }
 
 void vsp::Renderer::shutdown()
@@ -23,6 +26,7 @@ void vsp::Renderer::shutdown()
 	if (m_ctx == nullptr) return;
 
 	vkDeviceWaitIdle(m_ctx->device());   // never destroy things the GPU is still using
+	destroyPipelines();
 	destroyFrames();
 	m_swapchain.shutdown();
 	m_ctx = nullptr;
@@ -192,9 +196,28 @@ void vsp::Renderer::recordCommands(VkCommandBuffer cmd, uint32_t imageIndex, dou
 	renderingInfo.colorAttachmentCount = 1;
 	renderingInfo.pColorAttachments = &color;
 
-	vkCmdBeginRendering(cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd, &renderingInfo); //----------------------------------------------------------------------------------------
 	// Phase 2: draw calls go here
-	vkCmdEndRendering(cmd);
+
+	// Which pipeline (shaders + fixed settings) to draw with
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_trianglePipeline);
+
+	// Dynamic state: cover the whole swapchain image (changes on resize, so set every frame)
+	const VkExtent2D extent = m_swapchain.extent();
+	VkViewport viewport{};
+	viewport.width = static_cast<float>(extent.width);
+	viewport.height = static_cast<float>(extent.height);
+	viewport.maxDepth = 1.0f;
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+	VkRect2D scissor{ { 0, 0 }, extent };
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+	// 3 vertices, 1 instance. The vertex shader runs 3 times with gl_VertexIndex = 0, 1, 2.
+	vkCmdDraw(cmd, 3, 1, 0, 0);
+
+
+	vkCmdEndRendering(cmd);  //----------------------------------------------------------------------------------------
 
 	// Barrier 2: drawn -> ready to be shown
 	vkutil::transitionImage(cmd, image,
@@ -203,4 +226,36 @@ void vsp::Renderer::recordCommands(VkCommandBuffer cmd, uint32_t imageIndex, dou
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_NONE);
 
 	VK_CHECK(vkEndCommandBuffer(cmd));
+}
+
+void vsp::Renderer::createPipelines()
+{
+	VkDevice device = m_ctx->device();
+
+	// Pipeline layout = the list of resources the shaders can access. Empty for now:
+	// push constants and descriptor sets
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
+
+	VkShaderModule vert = vkutil::loadShaderModule(device, vkutil::shaderPath("triangle.vert"));
+	VkShaderModule frag = vkutil::loadShaderModule(device, vkutil::shaderPath("triangle.frag"));
+
+	// a Builder pattern with a fluent interface (method chaining), used on a temporary object.
+	m_trianglePipeline = PipelineBuilder{}
+		.shaders(vert, frag)
+		.colorFormat(m_swapchain.format())
+		.build(device, m_pipelineLayout);
+
+	// The pipeline has its own compiled copy of the code: the modules can go now
+	vkDestroyShaderModule(device, frag, nullptr);
+	vkDestroyShaderModule(device, vert, nullptr);
+}
+
+void vsp::Renderer::destroyPipelines()
+{
+	VkDevice device = m_ctx->device();
+	vkDestroyPipeline(device, m_trianglePipeline, nullptr);
+	vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
+	m_trianglePipeline = VK_NULL_HANDLE;
+	m_pipelineLayout = VK_NULL_HANDLE;
 }
